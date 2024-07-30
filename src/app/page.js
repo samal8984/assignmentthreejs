@@ -23,10 +23,6 @@ export default function Home() {
   
   const [hoveredProduct, setHoveredProduct] = useState(null);
 
-
-
-
-
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -42,9 +38,6 @@ export default function Home() {
     camera.position.y = 10
    
 
-   
-   
-   
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     mountRef.current.appendChild(renderer.domElement);
@@ -137,7 +130,13 @@ export default function Home() {
         }
       };
 
-      window.addEventListener('mousemove', onMouseMove);
+      if(typeof window === undefined){
+        return 
+      }else{
+        window.addEventListener('mousemove', onMouseMove);
+
+      }
+
 
        const gui = new GUI();
       const controlOptions = { 'Enable Controls': controlsEnabled };
@@ -163,14 +162,21 @@ export default function Home() {
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener('resize', handleResize);
+
+    if(typeof window === undefined){
+      return 
+    }else{
+      window.addEventListener('resize', handleResize);
+
+    }
+  
 
    
     return () => {
       window.removeEventListener('resize', handleResize);
       mountRef.current.removeChild(renderer.domElement);
     };
-  }, [controlsEnabled]);
+  }, [controlsEnabled]); 
 
 
 
