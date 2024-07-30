@@ -11,6 +11,7 @@ import fontJson from 'three/examples/fonts/helvetiker_regular.typeface.json';
 import axios from 'axios';
 import { data } from '../../data';
 import { GUI } from 'dat.gui';
+import { useFrame } from '@react-three/fiber';
 
 
 
@@ -23,7 +24,7 @@ export default function Home() {
   const [hoveredProduct, setHoveredProduct] = useState(null);
 
 
- 
+
 
 
   const mountRef = useRef(null);
@@ -37,7 +38,10 @@ export default function Home() {
     camera.position.z = 5;
     camera.position.x = 5;
     camera.position.y = 10
+   
 
+   
+   
    
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -50,9 +54,12 @@ export default function Home() {
     controls.maxPolarAngle = Math.PI / 2;
 
     
+
+    
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(5, 5, 5).normalize();
     scene.add(light);
+   
    
 
     
@@ -67,7 +74,7 @@ export default function Home() {
       const loader = new GLTFLoader();
       loader.load('https://centeralrepobucket.s3.ap-south-1.amazonaws.com/drift_race_track_free.glb', (gltf) => {
         const model = gltf.scene;
-        model.position.set(0, 0, 0);  
+        model.position.set(0, -20, 0);  
         scene.add(model);
         animate();  
       }, undefined, (error) => {
@@ -80,6 +87,7 @@ export default function Home() {
 
     const radius = 10;
       const geometry = new CircleGeometry(1, 32);
+      
       
       data.forEach((product, index) => {
         const angle = index * (Math.PI * 2 / data.length);
@@ -161,6 +169,8 @@ export default function Home() {
       mountRef.current.removeChild(renderer.domElement);
     };
   }, [controlsEnabled]);
+
+
 
 
 
