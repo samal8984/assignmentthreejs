@@ -1,113 +1,189 @@
-import Image from "next/image";
+'use client'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
+import { Raycaster, Vector2, Mesh, CircleGeometry, MeshBasicMaterial } from 'three';
+import fontJson from 'three/examples/fonts/helvetiker_regular.typeface.json';
+import axios from 'axios';
+import { data } from '../../data';
+import { GUI } from 'dat.gui';
+
+
 
 export default function Home() {
+
+  const [products, setProducts] = useState()
+  const [controlsEnabled, setControlsEnabled] = useState(true);
+
+  
+  const [hoveredProduct, setHoveredProduct] = useState(null);
+
+
+ 
+
+
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+   
+    const scene = new THREE.Scene();
+
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+    camera.position.x = 5;
+    camera.position.y = 10
+
+   
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    mountRef.current.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; 
+    controls.dampingFactor = 0.25;
+    controls.screenSpacePanning = false;
+    controls.maxPolarAngle = Math.PI / 2;
+
+    
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5).normalize();
+    scene.add(light);
+   
+
+    
+    const exrLoader = new EXRLoader();
+    exrLoader.load('https://centeralrepobucket.s3.ap-south-1.amazonaws.com/venice_sunset_4k+(2).exr', (texture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = texture;
+      scene.background = texture;
+
+      
+
+      const loader = new GLTFLoader();
+      loader.load('https://centeralrepobucket.s3.ap-south-1.amazonaws.com/drift_race_track_free.glb', (gltf) => {
+        const model = gltf.scene;
+        model.position.set(0, 0, 0);  
+        scene.add(model);
+        animate();  
+      }, undefined, (error) => {
+        console.error(error);
+      });
+    });
+
+
+    const font = new FontLoader().parse(fontJson);
+
+    const radius = 10;
+      const geometry = new CircleGeometry(1, 32);
+      
+      data.forEach((product, index) => {
+        const angle = index * (Math.PI * 2 / data.length);
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        const circleMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+        const circleMesh = new Mesh(geometry, circleMaterial);
+        circleMesh.position.set(x, y, 0); 
+        circleMesh.userData = { product, index };
+        scene.add(circleMesh);
+
+        // Add product number text
+        const textGeometry = new TextGeometry(`${index + 1}`, {
+          font: font,
+          size: 0.5,
+          height: 0.1
+        });
+        const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.set(circleMesh.position.x - 0.3, circleMesh.position.y - 0.3, circleMesh.position.z);
+        scene.add(textMesh);
+      });
+
+      // Set up raycaster for hover detection
+      const raycaster = new Raycaster();
+      const mouse = new Vector2();
+
+      const onMouseMove = (event) => {
+        // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+     
+        raycaster.ray.origin.copy(camera.position);
+        raycaster.ray.direction.set(mouse.x, mouse.y, 0.5).unproject(camera).sub(raycaster.ray.origin).normalize();
+
+
+        // Check for intersections
+        const intersects = raycaster.intersectObjects(scene.children);
+        if (intersects.length > 0) {
+          const intersectedObject = intersects[0].object;
+          setHoveredProduct(intersectedObject.userData.product);
+        } else {
+          setHoveredProduct(null);
+        }
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+
+       const gui = new GUI();
+      const controlOptions = { 'Enable Controls': controlsEnabled };
+
+      gui.add(controlOptions, 'Enable Controls').onChange(value => {
+        setControlsEnabled(value);
+        if (value) {
+          controls.enabled = true;
+        } else {
+          controls.enabled = false;
+        }
+      });
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        if (controlsEnabled) {
+          controls.update();
+        }
+        renderer.render(scene, camera);
+      };
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+   
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      mountRef.current.removeChild(renderer.domElement);
+    };
+  }, [controlsEnabled]);
+
+
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div ref={mountRef} style={{ width: '100vw', height: '100vh' }} >
+      {hoveredProduct && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          backgroundColor: 'white',
+          padding: '10px',
+          borderRadius: '5px',
+          boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+          zIndex: 1,
+        }}>
+          <h3>{hoveredProduct.title}</h3>
+          <p>{hoveredProduct.description}</p>
+          <p>Price: ${hoveredProduct.price}</p>
+          <p>Rating: {hoveredProduct.rating.rate} ({hoveredProduct.rating.count} reviews)</p>
         </div>
-      </div>
+      )}
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+        </div>
   );
 }
