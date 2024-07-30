@@ -170,7 +170,7 @@ export default function Home() {
 
    
     return () => {
-      window.addEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mousemove', onMouseMove);
 
       window.removeEventListener('resize', handleResize);
       mountRef.current.removeChild(renderer.domElement);
