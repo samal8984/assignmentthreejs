@@ -30,6 +30,8 @@ export default function Home() {
   const mountRef = useRef(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return; 
+
    
     const scene = new THREE.Scene();
 
@@ -116,7 +118,7 @@ export default function Home() {
       const mouse = new Vector2();
 
       const onMouseMove = (event) => {
-        // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
+        if (typeof window === 'undefined') return; 
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
