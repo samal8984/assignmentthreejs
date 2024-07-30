@@ -130,12 +130,10 @@ export default function Home() {
         }
       };
 
-      if(typeof window === undefined){
-        return 
-      }else{
+   
+     
         window.addEventListener('mousemove', onMouseMove);
-
-      }
+    
 
 
        const gui = new GUI();
@@ -163,19 +161,21 @@ export default function Home() {
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
 
-    if(typeof window === undefined){
-      return 
-    }else{
-      window.addEventListener('resize', handleResize);
+ 
 
-    }
+   
+      window.addEventListener('resize', handleResize);
+  
   
 
    
     return () => {
+      window.addEventListener('mousemove', onMouseMove);
+
       window.removeEventListener('resize', handleResize);
       mountRef.current.removeChild(renderer.domElement);
     };
+    
   }, [controlsEnabled]); 
 
 
